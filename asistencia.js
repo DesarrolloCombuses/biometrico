@@ -23,6 +23,9 @@ const state = {
   faceWarning: "",
   nextSentido: "entrada",
   currentHistory: [],
+  historyPage: 1,
+  historyPageSize: 10,
+  historyTotal: 0,
   lastAttendance: null,
   cameraStream: null,
   cameraOpenedAt: 0,
@@ -52,9 +55,11 @@ const elements = {
   loginView: $("#loginView"),
   appView: $("#appView"),
   registerTabButton: $("#registerTabButton"),
+  historyTabButton: $("#historyTabButton"),
   databaseTabButton: $("#databaseTabButton"),
   adminTabButton: $("#adminTabButton"),
   registerPanel: $("#registerPanel"),
+  historyPanel: $("#historyPanel"),
   databasePanel: $("#databasePanel"),
   adminPanel: $("#adminPanel"),
   loginForm: $("#loginForm"),
@@ -95,6 +100,13 @@ const elements = {
   processTitle: $("#processTitle"),
   processText: $("#processText"),
   refreshButton: $("#refreshButton"),
+  historyDniInput: $("#historyDniInput"),
+  historyStartDateInput: $("#historyStartDateInput"),
+  historyEndDateInput: $("#historyEndDateInput"),
+  historySearchButton: $("#historySearchButton"),
+  historyPrevPageButton: $("#historyPrevPageButton"),
+  historyNextPageButton: $("#historyNextPageButton"),
+  historyPageLabel: $("#historyPageLabel"),
   historySubtitle: $("#historySubtitle"),
   historySummary: $("#historySummary"),
   historyTotal: $("#historyTotal"),
@@ -390,12 +402,15 @@ function showTab(tabName) {
     tabName = "register";
   }
 
+  const isHistory = tabName === "history";
   const isDatabase = tabName === "database";
   const isAdmin = tabName === "admin";
-  elements.registerPanel.classList.toggle("hidden", isDatabase || isAdmin);
+  elements.registerPanel.classList.toggle("hidden", isHistory || isDatabase || isAdmin);
+  elements.historyPanel.classList.toggle("hidden", !isHistory);
   elements.databasePanel.classList.toggle("hidden", !isDatabase);
   elements.adminPanel.classList.toggle("hidden", !isAdmin);
-  elements.registerTabButton.classList.toggle("active", !isDatabase && !isAdmin);
+  elements.registerTabButton.classList.toggle("active", !isHistory && !isDatabase && !isAdmin);
+  elements.historyTabButton.classList.toggle("active", isHistory);
   elements.databaseTabButton.classList.toggle("active", isDatabase);
   elements.adminTabButton.classList.toggle("active", isAdmin);
 
@@ -476,10 +491,8 @@ async function buscarColaborador() {
   }
 
   state.colaborador = data || null;
-  await loadTodayHistory(dni);
   await loadLastAttendance(dni);
   state.nextSentido = getNextSentidoFromLastAttendance();
-  renderHistorySummary(state.currentHistory, dni);
   const faceStatus = data?.rostro_enrolado ? "Rostro enrolado." : "Sin rostro enrolado: solo se validara presencia de rostro.";
   const openInfo = getOpenAttendanceInfo();
   elements.collaboratorBox.className = "result-box";
@@ -1004,6 +1017,13 @@ function setupManualDefaults() {
   elements.manualTimeInput.value = now.time.slice(0, 5);
 }
 
+function setupHistoryDefaults() {
+  if (elements.historyStartDateInput.value || elements.historyEndDateInput.value) return;
+  const now = getTodayParts();
+  elements.historyStartDateInput.value = `${now.year}-${now.month}-01`;
+  elements.historyEndDateInput.value = now.date;
+}
+
 async function getLocation() {
   if (!navigator.geolocation) return {};
 
@@ -1117,10 +1137,8 @@ async function submitAttendance(event) {
 
     resetAttendanceForm(true);
     elements.dniInput.value = colaboradorDni;
-    await loadTodayHistory(colaboradorDni);
     await loadLastAttendance(colaboradorDni);
     state.nextSentido = getNextSentidoFromLastAttendance();
-    renderHistorySummary(state.currentHistory, colaboradorDni);
   } catch (error) {
     setMessage(elements.formMessage, error.message || "No se pudo registrar la asistencia.", "error");
     elements.submitButton.disabled = !state.faceValidated;
@@ -1190,34 +1208,65 @@ function resetAttendanceForm(preserveBukResult = false) {
 }
 
 async function loadTodayHistory() {
-  const today = getTodayParts().date;
   elements.historyList.textContent = "Cargando...";
 
-  const dni = normalizeDni(arguments[0] || elements.dniInput.value);
+  const dni = normalizeDni(arguments[0] || elements.historyDniInput.value);
+  if (!dni) {
+    clearHistoryPanel();
+    elements.historyList.textContent = "Digita una cedula para consultar sus registros.";
+    return;
+  }
+  const startDate = elements.historyStartDateInput.value;
+  const endDate = elements.historyEndDateInput.value;
+  if (startDate && endDate && startDate > endDate) {
+    elements.historyList.textContent = "La fecha inicial no puede ser mayor que la fecha final.";
+    return;
+  }
+
+  const from = (state.historyPage - 1) * state.historyPageSize;
+  const to = from + state.historyPageSize - 1;
   let query = supabaseClient
     .from("asistencias")
     .select(dni ? "id,fecha,hora,sentido,origen,observacion,enviado_buk,buk_status,colaboradores!inner(dni,nombre)" : "id,fecha,hora,sentido,origen,observacion,enviado_buk,buk_status,colaboradores(dni,nombre)")
-    .eq("fecha", today)
-    .order("created_at", { ascending: false })
-    .limit(12);
+    .order("fecha", { ascending: false })
+    .order("hora", { ascending: false })
+    .range(from, to);
+
+  let countQuery = supabaseClient
+    .from("asistencias")
+    .select("id,colaboradores!inner(dni)", { count: "exact", head: true });
 
   if (dni) {
     query = query.eq("colaboradores.dni", dni);
+    countQuery = countQuery.eq("colaboradores.dni", dni);
   }
 
-  const { data, error } = await query;
+  if (startDate) {
+    query = query.gte("fecha", startDate);
+    countQuery = countQuery.gte("fecha", startDate);
+  }
 
-  if (error) {
+  if (endDate) {
+    query = query.lte("fecha", endDate);
+    countQuery = countQuery.lte("fecha", endDate);
+  }
+
+  const [{ data, error }, { count, error: countError }] = await Promise.all([query, countQuery]);
+
+  if (error || countError) {
     elements.historyList.textContent = "No se pudieron cargar los registros.";
     return;
   }
 
-  const rows = dni ? data.filter((item) => item.colaboradores?.dni === dni) : data;
+  const resultRows = data || [];
+  const rows = dni ? resultRows.filter((item) => item.colaboradores?.dni === dni) : resultRows;
+  state.historyTotal = count || 0;
   state.currentHistory = rows;
   renderHistorySummary(rows, dni);
+  renderHistoryPagination();
 
   if (!rows.length) {
-    elements.historyList.textContent = dni ? "Sin registros para esta cedula hoy." : "Sin registros para hoy.";
+    elements.historyList.textContent = "Sin registros para esta cedula en el rango consultado.";
     return;
   }
 
@@ -1234,7 +1283,6 @@ async function loadTodayHistory() {
           <span>${escapeHtml(item.fecha)}</span>
           <span>${escapeHtml(item.origen || "web")}</span>
           <span>Buk ${item.enviado_buk ? "OK" : escapeHtml(item.buk_status || "pendiente")}</span>
-          ${item.observacion ? `<span>${escapeHtml(item.observacion)}</span>` : ""}
         </div>
       </div>
     </article>
@@ -1242,12 +1290,16 @@ async function loadTodayHistory() {
 }
 
 async function refreshCurrentHistory() {
-  const dni = normalizeDni(elements.dniInput.value);
+  const dni = normalizeDni(elements.historyDniInput.value);
+  if (!dni) {
+    clearHistoryPanel();
+    elements.historyList.textContent = "Digita una cedula para consultar sus registros.";
+    return;
+  }
+  if (arguments[0] !== "keep-page") state.historyPage = 1;
   await loadTodayHistory(dni);
   await loadLastAttendance(dni);
-  state.nextSentido = getNextSentidoFromLastAttendance();
   renderHistorySummary(state.currentHistory, dni);
-  setWorkflowState(state.faceValidated ? "register" : (state.csvCandidate ? "photo" : "dni"));
 }
 
 async function loadLastAttendance(dni) {
@@ -1277,9 +1329,12 @@ async function loadLastAttendance(dni) {
 function clearHistoryPanel() {
   state.currentHistory = [];
   state.lastAttendance = null;
+  state.historyPage = 1;
+  state.historyTotal = 0;
   elements.historySubtitle.textContent = "Digita una cedula para consultar";
   elements.historySummary.classList.add("hidden");
   elements.historyList.textContent = "Digita una cedula para ver sus registros de hoy.";
+  renderHistoryPagination();
 }
 
 function renderHistorySummary(rows, dni) {
@@ -1289,13 +1344,21 @@ function renderHistorySummary(rows, dni) {
     return;
   }
 
-  const lastToday = rows[0];
+  const lastRecord = rows[0];
   const next = getNextSentidoFromLastAttendance();
   elements.historySubtitle.textContent = dni;
-  elements.historyTotal.textContent = String(rows.length);
-  elements.historyLast.textContent = lastToday ? `${lastToday.sentido} ${String(lastToday.hora).slice(0, 5)}` : "--";
+  elements.historyTotal.textContent = String(state.historyTotal || rows.length);
+  elements.historyLast.textContent = lastRecord ? `${lastRecord.sentido} ${lastRecord.fecha} ${String(lastRecord.hora).slice(0, 5)}` : "--";
   elements.historyNext.textContent = next;
   elements.historySummary.classList.remove("hidden");
+}
+
+function renderHistoryPagination() {
+  const totalPages = Math.max(1, Math.ceil((state.historyTotal || 0) / state.historyPageSize));
+  if (state.historyPage > totalPages) state.historyPage = totalPages;
+  elements.historyPageLabel.textContent = `Pagina ${state.historyPage} de ${totalPages}`;
+  elements.historyPrevPageButton.disabled = state.historyPage <= 1 || state.historyTotal === 0;
+  elements.historyNextPageButton.disabled = state.historyPage >= totalPages || state.historyTotal === 0;
 }
 
 function getNextSentidoFromLastAttendance() {
@@ -1458,14 +1521,14 @@ function renderAdminMarks() {
   const dniQuery = normalizeDni(elements.adminDniSearchInput.value);
   const dateQuery = elements.adminDateSearchInput.value;
   const selectedCargos = getSelectedAdminCargos();
-  const rows = state.adminMarks.filter((item) => {
-    const dni = item.colaboradores?.dni || "";
-    const name = getDisplayNameForDni(dni, item.colaboradores?.nombre);
+  const rows = buildAdminJourneys(state.adminMarks).filter((item) => {
+    const dni = item.dni || "";
+    const name = item.nombre || getDisplayNameForDni(dni);
     const cargo = getCargoForDni(dni);
 
     if (nameQuery && !name.toLowerCase().includes(nameQuery)) return false;
     if (dniQuery && !normalizeDni(dni).includes(dniQuery)) return false;
-    if (dateQuery && item.fecha !== dateQuery) return false;
+    if (dateQuery && item.fecha !== dateQuery && item.salidaFecha !== dateQuery) return false;
     if (selectedCargos.length && !selectedCargos.includes(cargo)) return false;
     return true;
   });
@@ -1476,22 +1539,126 @@ function renderAdminMarks() {
   const start = (state.adminPage - 1) * state.adminPageSize;
   const pageRows = rows.slice(start, start + state.adminPageSize);
 
-  elements.adminMarksStatus.textContent = `${rows.length} de ${state.adminMarks.length} marcas`;
+  elements.adminMarksStatus.textContent = `${rows.length} jornadas (${state.adminMarks.length} marcas)`;
   elements.adminPageLabel.textContent = `Página ${state.adminPage} de ${totalPages}`;
   elements.adminPrevPageButton.disabled = state.adminPage <= 1;
   elements.adminNextPageButton.disabled = state.adminPage >= totalPages;
   elements.adminMarksBody.innerHTML = pageRows.map((item) => `
     <tr>
       <td>${escapeHtml(item.fecha)}</td>
-      <td>${escapeHtml(String(item.hora).slice(0, 5))}</td>
-      <td>${escapeHtml(item.colaboradores?.dni || "")}</td>
-      <td>${escapeHtml(getDisplayNameForDni(item.colaboradores?.dni, item.colaboradores?.nombre))}</td>
-      <td><span class="pill ${escapeHtml(item.sentido)}">${escapeHtml(item.sentido)}</span></td>
-      <td>${escapeHtml(item.origen || "")}</td>
-      <td>${item.enviado_buk ? "OK" : escapeHtml(item.buk_status || "Pendiente")}</td>
+      <td>${escapeHtml(item.dni || "")}</td>
+      <td>${escapeHtml(item.nombre || "")}</td>
+      <td>${renderJourneyMark(item.entrada, "entrada")}</td>
+      <td>${renderJourneyMark(item.salida, "salida")}</td>
+      <td>${escapeHtml(item.tiempo || "")}</td>
+      <td>${renderJourneyBuk(item)}</td>
       <td>${escapeHtml(item.observacion || "")}</td>
     </tr>
   `).join("");
+}
+
+function buildAdminJourneys(marks) {
+  const byDni = new Map();
+
+  marks.forEach((mark) => {
+    const dni = mark.colaboradores?.dni || "";
+    if (!dni) return;
+    if (!byDni.has(dni)) byDni.set(dni, []);
+    byDni.get(dni).push(mark);
+  });
+
+  const journeys = [];
+  byDni.forEach((items, dni) => {
+    const sorted = [...items].sort((a, b) => compareMarkDateTime(a, b));
+    let openEntry = null;
+
+    sorted.forEach((mark) => {
+      if (mark.sentido === "entrada") {
+        if (openEntry) journeys.push(createAdminJourney(dni, openEntry, null));
+        openEntry = mark;
+        return;
+      }
+
+      if (mark.sentido === "salida") {
+        if (openEntry) {
+          journeys.push(createAdminJourney(dni, openEntry, mark));
+          openEntry = null;
+        } else {
+          journeys.push(createAdminJourney(dni, null, mark));
+        }
+      }
+    });
+
+    if (openEntry) journeys.push(createAdminJourney(dni, openEntry, null));
+  });
+
+  return journeys.sort((a, b) => {
+    const bTime = `${b.salidaFecha || b.fecha}T${b.salida?.hora || b.entrada?.hora || "00:00:00"}`;
+    const aTime = `${a.salidaFecha || a.fecha}T${a.salida?.hora || a.entrada?.hora || "00:00:00"}`;
+    return bTime.localeCompare(aTime);
+  });
+}
+
+function createAdminJourney(dni, entrada, salida) {
+  const nombre = getDisplayNameForDni(dni, entrada?.colaboradores?.nombre || salida?.colaboradores?.nombre);
+  const fecha = entrada?.fecha || salida?.fecha || "";
+  const salidaFecha = salida?.fecha || "";
+  const observacion = [formatMarkNote(entrada), formatMarkNote(salida)].filter(Boolean).join(" | ");
+
+  return {
+    dni,
+    nombre,
+    fecha,
+    salidaFecha,
+    entrada,
+    salida,
+    tiempo: calculateJourneyDuration(entrada, salida),
+    observacion
+  };
+}
+
+function compareMarkDateTime(a, b) {
+  return `${a.fecha}T${a.hora}`.localeCompare(`${b.fecha}T${b.hora}`);
+}
+
+function renderJourneyMark(mark, type) {
+  if (!mark) {
+    return `<span class="journey-missing">${type === "entrada" ? "Sin entrada" : "Pendiente"}</span>`;
+  }
+
+  const date = type === "salida" && mark.fecha ? ` · ${escapeHtml(mark.fecha)}` : "";
+  const origin = mark.origen ? ` · ${escapeHtml(mark.origen)}` : "";
+  return `
+    <div class="journey-mark">
+      <span class="pill ${escapeHtml(type)}">${escapeHtml(String(mark.hora).slice(0, 5))}</span>
+      <small>${date}${origin}</small>
+    </div>
+  `;
+}
+
+function renderJourneyBuk(item) {
+  const statuses = [item.entrada, item.salida]
+    .filter(Boolean)
+    .map((mark) => mark.enviado_buk ? "OK" : String(mark.buk_status || "Pendiente"));
+  return escapeHtml(statuses.length ? Array.from(new Set(statuses)).join(" / ") : "Pendiente");
+}
+
+function formatMarkNote(mark) {
+  if (!mark?.observacion) return "";
+  return `${mark.sentido}: ${mark.observacion}`;
+}
+
+function calculateJourneyDuration(entrada, salida) {
+  if (!entrada || !salida) return salida ? "Sin entrada" : "Pendiente";
+
+  const start = new Date(`${entrada.fecha}T${String(entrada.hora).slice(0, 8)}`);
+  const end = new Date(`${salida.fecha}T${String(salida.hora).slice(0, 8)}`);
+  const minutes = Math.round((end - start) / 60000);
+  if (!Number.isFinite(minutes) || minutes < 0) return "";
+
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return `${hours}h ${String(rest).padStart(2, "0")}m`;
 }
 
 function populateAdminCargoFilter() {
@@ -1803,6 +1970,11 @@ async function deleteReferenceFace() {
 elements.loginForm.addEventListener("submit", login);
 elements.logoutButton.addEventListener("click", logout);
 elements.registerTabButton.addEventListener("click", () => showTab("register"));
+elements.historyTabButton.addEventListener("click", () => {
+  showTab("history");
+  setupHistoryDefaults();
+  if (!normalizeDni(elements.historyDniInput.value)) clearHistoryPanel();
+});
 elements.databaseTabButton.addEventListener("click", () => showTab("database"));
 elements.adminTabButton.addEventListener("click", () => showTab("admin"));
 elements.searchButton.addEventListener("click", buscarColaborador);
@@ -1818,6 +1990,27 @@ elements.captureButton.addEventListener("click", capturePhoto);
 elements.stopCameraButton.addEventListener("click", stopCamera);
 elements.attendanceForm.addEventListener("submit", submitAttendance);
 elements.refreshButton.addEventListener("click", refreshCurrentHistory);
+elements.historySearchButton.addEventListener("click", refreshCurrentHistory);
+elements.historyDniInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    refreshCurrentHistory();
+  }
+});
+elements.historyStartDateInput.addEventListener("change", () => {
+  state.historyPage = 1;
+});
+elements.historyEndDateInput.addEventListener("change", () => {
+  state.historyPage = 1;
+});
+elements.historyPrevPageButton.addEventListener("click", () => {
+  state.historyPage = Math.max(1, state.historyPage - 1);
+  refreshCurrentHistory("keep-page");
+});
+elements.historyNextPageButton.addEventListener("click", () => {
+  state.historyPage += 1;
+  refreshCurrentHistory("keep-page");
+});
 elements.reloadCsvButton.addEventListener("click", loadCollaboratorsCsv);
 elements.csvSearchInput.addEventListener("input", renderCsvTable);
 elements.manualExitForm.addEventListener("submit", registerManualExit);
@@ -1855,4 +2048,5 @@ elements.csvTableBody.addEventListener("click", (event) => {
 });
 
 init();
+
 
