@@ -10,6 +10,10 @@ const FACE_IDENTITY_TIMEOUT_MS = 6500;
 
 const $ = (selector) => document.querySelector(selector);
 
+if (window.matchMedia?.("(pointer: coarse)").matches || navigator.maxTouchPoints > 0) {
+  document.documentElement.classList.add("touch-device");
+}
+
 const state = {
   user: null,
   colaborador: null,
@@ -486,7 +490,6 @@ async function startCamera() {
   }
 
   try {
-    await initFaceDetector();
     state.cameraStream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
       audio: false
@@ -499,9 +502,15 @@ async function startCamera() {
     elements.faceGuide.classList.remove("ready", "error");
     setMessage(elements.formMessage, "Ubica el rostro dentro del recuadro y captura.", "");
     scheduleAttendanceFaceFallback();
-    startLiveFaceDetection();
+    initFaceDetector().then((ready) => {
+      if (ready) {
+        startLiveFaceDetection();
+      } else {
+        elements.liveFaceStatus.textContent = "El lector facial no cargo. Toma una foto frontal para registrar con evidencia.";
+      }
+    });
   } catch (_error) {
-    setMessage(elements.formMessage, "No se pudo abrir la camara o cargar el detector facial.", "error");
+    setMessage(elements.formMessage, "No se pudo abrir la camara.", "error");
   }
 }
 
@@ -839,7 +848,7 @@ function validateDetectedFaces(faces, imageWidth, imageHeight) {
   }
 
   const score = faces[0].categories?.[0]?.score ?? faces[0].score?.[0] ?? 1;
-  if (score < 0.85) {
+  if (score < 0.55) {
     return { ok: false, message: "El rostro no es suficientemente claro. Mejora la luz y vuelve a capturar." };
   }
 
@@ -852,20 +861,20 @@ function validateDetectedFaces(faces, imageWidth, imageHeight) {
   const imageArea = imageWidth * imageHeight;
 
   const faceRatio = faceArea / imageArea;
-  if (faceRatio < 0.09) {
+  if (faceRatio < 0.035) {
     return { ok: false, message: "El rostro esta muy pequeno. Acerca la camara y vuelve a capturar." };
   }
 
-  if (faceRatio > 0.42) {
+  if (faceRatio > 0.78) {
     return { ok: false, message: "El rostro esta demasiado cerca. Alejate un poco de la camara." };
   }
 
   const faceCenterX = x + width / 2;
   const faceCenterY = y + height / 2;
-  const guideLeft = imageWidth * 0.26;
-  const guideRight = imageWidth * 0.74;
-  const guideTop = imageHeight * 0.16;
-  const guideBottom = imageHeight * 0.86;
+  const guideLeft = imageWidth * 0.08;
+  const guideRight = imageWidth * 0.92;
+  const guideTop = imageHeight * 0.06;
+  const guideBottom = imageHeight * 0.94;
 
   if (
     faceCenterX < guideLeft ||
@@ -877,7 +886,7 @@ function validateDetectedFaces(faces, imageWidth, imageHeight) {
   }
 
   const aspectRatio = width / height;
-  if (aspectRatio < 0.55 || aspectRatio > 1.15) {
+  if (aspectRatio < 0.35 || aspectRatio > 1.65) {
     return { ok: false, message: "Toma la foto de frente, sin girar demasiado el rostro." };
   }
 
@@ -1790,3 +1799,4 @@ elements.csvTableBody.addEventListener("click", (event) => {
 });
 
 init();
+
