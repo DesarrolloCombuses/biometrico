@@ -774,19 +774,58 @@ video,
 .touch-device .shell {
   width: 100%;
   padding: 0;
+  font-size: 17px;
 }
 
 .touch-device .app-view {
-  padding: 10px;
+  padding: 12px;
+}
+
+.touch-device body {
+  font-size: 17px;
+}
+
+.touch-device input,
+.touch-device textarea,
+.touch-device select {
+  min-height: 54px;
+  padding: 14px 15px;
+  font-size: 17px;
+}
+
+.touch-device textarea {
+  min-height: 104px;
+}
+
+.touch-device label {
+  gap: 9px;
+  font-size: 1rem;
 }
 
 .touch-device .topbar {
   align-items: flex-start;
+  gap: 12px;
+}
+
+.touch-device .topbar h1 {
+  font-size: 1.35rem;
+}
+
+.touch-device .topbar p {
+  max-width: 74vw;
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
 }
 
 .touch-device .top-actions {
   align-items: flex-end;
   flex-direction: column-reverse;
+}
+
+.touch-device .connection-status {
+  min-height: 38px;
+  padding: 0 13px;
+  font-size: 0.92rem;
 }
 
 .touch-device .tabs {
@@ -797,18 +836,21 @@ video,
 .touch-device .tab-button {
   flex: 0 0 auto;
   min-width: max-content;
+  min-height: 50px;
+  padding: 0 16px;
+  font-size: 1rem;
 }
 
 .touch-device .work-grid {
   grid-template-columns: 1fr;
-  gap: 12px;
+  gap: 14px;
 }
 
 .touch-device .auth-panel,
 .touch-device .form-panel,
 .touch-device .history-panel,
 .touch-device .database-panel {
-  padding: 14px;
+  padding: 16px;
 }
 
 .touch-device .field-row,
@@ -830,12 +872,100 @@ video,
 .touch-device .secondary,
 .touch-device .file-button,
 .touch-device .icon-button {
-  min-height: 48px;
+  min-height: 54px;
+  padding: 0 18px;
+  font-size: 1rem;
+}
+
+.touch-device .icon-button {
+  width: 54px;
+}
+
+.touch-device svg {
+  width: 21px;
+  height: 21px;
+}
+
+.touch-device .step-item {
+  min-height: 56px;
+  padding: 10px 12px;
+}
+
+.touch-device .step-item span {
+  width: 32px;
+  height: 32px;
+}
+
+.touch-device .step-item strong {
+  font-size: 1rem;
+}
+
+.touch-device .result-box {
+  min-height: 112px;
+  padding: 16px;
+  font-size: 1rem;
+  line-height: 1.38;
+}
+
+.touch-device .server-time-box div,
+.touch-device .next-mark-box {
+  padding: 15px;
+}
+
+.touch-device .server-time-box span,
+.touch-device .history-summary span {
+  font-size: 0.9rem;
+}
+
+.touch-device .server-time-box strong,
+.touch-device .history-summary strong {
+  font-size: 1.15rem;
+}
+
+.touch-device .next-mark-box {
+  min-height: 60px;
+  font-size: 1rem;
+}
+
+.touch-device .message {
+  min-height: 28px;
+  font-size: 1rem;
+  line-height: 1.35;
 }
 
 .touch-device .server-time-box,
 .touch-device .history-summary {
   grid-template-columns: 1fr;
+}
+
+.touch-device .history-item {
+  grid-template-columns: 1fr;
+  padding: 14px;
+}
+
+.touch-device .history-time {
+  min-height: 50px;
+  font-size: 1.25rem;
+}
+
+.touch-device .history-main strong {
+  align-items: flex-start;
+  flex-direction: column;
+  font-size: 1.02rem;
+}
+
+.touch-device .history-meta span,
+.touch-device .pill {
+  font-size: 0.88rem;
+}
+
+.touch-device .preview-box {
+  grid-template-columns: 88px minmax(0, 1fr);
+  padding: 12px;
+}
+
+.touch-device .preview-box img {
+  height: 76px;
 }
 
 .touch-device .camera-overlay {
@@ -863,11 +993,11 @@ video,
 }
 
 .touch-device .camera-header h2 {
-  font-size: 1.12rem;
+  font-size: 1.3rem;
 }
 
 .touch-device .camera-header p {
-  font-size: 0.9rem;
+  font-size: 1rem;
   line-height: 1.25;
 }
 
@@ -888,8 +1018,8 @@ video,
 }
 
 .touch-device .camera-modal .primary {
-  min-height: 56px;
-  font-size: 1rem;
+  min-height: 62px;
+  font-size: 1.08rem;
 }
 
 .touch-device .face-guide {
@@ -921,6 +1051,7 @@ video,
   .shell {
     width: min(100% - 18px, 760px);
     padding: 12px 0 18px;
+    font-size: 17px;
   }
 
   .topbar {
@@ -933,11 +1064,12 @@ video,
   }
 
   .topbar h1 {
-    font-size: 1.25rem;
+    font-size: 1.35rem;
   }
 
   .topbar p {
     max-width: 72vw;
+    font-size: 0.95rem;
     overflow-wrap: anywhere;
   }
 
@@ -949,6 +1081,8 @@ video,
   .tab-button {
     flex: 0 0 auto;
     min-width: max-content;
+    min-height: 50px;
+    font-size: 1rem;
   }
 
   .work-grid {
@@ -990,7 +1124,20 @@ video,
   .secondary,
   .file-button,
   .icon-button {
-    min-height: 48px;
+    min-height: 54px;
+    font-size: 1rem;
+  }
+
+  input,
+  textarea,
+  select {
+    min-height: 54px;
+    padding: 14px 15px;
+    font-size: 17px;
+  }
+
+  textarea {
+    min-height: 104px;
   }
 
   .next-mark-box {
@@ -1107,8 +1254,8 @@ video,
   }
 
   .camera-modal .primary {
-    min-height: 54px;
-    font-size: 1rem;
+    min-height: 62px;
+    font-size: 1.08rem;
   }
 
   .face-guide {
@@ -1136,7 +1283,7 @@ video,
   .form-panel,
   .history-panel,
   .database-panel {
-    padding: 14px;
+    padding: 16px;
   }
 
   .auth-view {
@@ -1159,11 +1306,11 @@ video,
   }
 
   .step-item {
-    min-height: 44px;
+    min-height: 56px;
   }
 
   .step-item strong {
-    font-size: 0.88rem;
+    font-size: 1rem;
   }
 
   .camera-overlay {
@@ -1203,7 +1350,8 @@ video,
   }
 
   input,
-  textarea {
+  textarea,
+  select {
     font-size: 16px;
   }
 }
