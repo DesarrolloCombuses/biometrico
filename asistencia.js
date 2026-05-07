@@ -88,8 +88,12 @@ const elements = {
   photoName: $("#photoName"),
   photoSize: $("#photoSize"),
   submitButton: $("#submitButton"),
+  nextActionNotice: $("#nextActionNotice"),
   formMessage: $("#formMessage"),
   bukResultBox: $("#bukResultBox"),
+  processOverlay: $("#processOverlay"),
+  processTitle: $("#processTitle"),
+  processText: $("#processText"),
   refreshButton: $("#refreshButton"),
   historySubtitle: $("#historySubtitle"),
   historySummary: $("#historySummary"),
@@ -138,6 +142,28 @@ function setBusy(button, busy) {
   button.disabled = busy;
 }
 
+function showProcess(title, text) {
+  if (!elements.processOverlay) return;
+  elements.processTitle.textContent = title;
+  elements.processText.textContent = text;
+  elements.processOverlay.classList.remove("hidden");
+}
+
+function hideProcess() {
+  elements.processOverlay?.classList.add("hidden");
+}
+
+function isMobilePhotoOnlyMode() {
+  return state.cameraMode === "attendance"
+    && (document.documentElement.classList.contains("touch-device") || window.matchMedia?.("(max-width: 820px)").matches);
+}
+
+function setNextActionNotice(text = "") {
+  if (!elements.nextActionNotice) return;
+  elements.nextActionNotice.textContent = text;
+  elements.nextActionNotice.classList.toggle("hidden", !text);
+}
+
 function clearBukResult() {
   elements.bukResultBox.textContent = "";
   elements.bukResultBox.classList.add("hidden");
@@ -170,8 +196,17 @@ function setWorkflowState(stage) {
 
   elements.cameraButton.disabled = stage === "dni";
   elements.submitButton.disabled = stage !== "register";
+  elements.submitButton.classList.toggle("attention", stage === "register");
   elements.markControls.classList.toggle("hidden", stage === "dni");
   elements.nextMarkLabel.textContent = state.nextSentido;
+
+  if (stage === "dni") {
+    setNextActionNotice("");
+  } else if (stage === "photo") {
+    setNextActionNotice("Paso pendiente: abre la camara y toma una foto del colaborador.");
+  } else if (stage === "register") {
+    setNextActionNotice("Ultimo paso: toca el boton verde Registrar asistencia para guardar la marca.");
+  }
 }
 
 function resetCaptureState(clearHistory = true) {
@@ -180,8 +215,10 @@ function resetCaptureState(clearHistory = true) {
   state.compressedFile = null;
   state.faceValidated = false;
   state.faceWarning = "";
+  state.faceWarning = "";
   elements.previewBox.classList.add("hidden");
   elements.photoPreview.removeAttribute("src");
+  setNextActionNotice("");
   setWorkflowState("dni");
   clearBukResult();
   if (clearHistory) clearHistoryPanel();
@@ -500,15 +537,23 @@ async function startCamera() {
     state.cameraOpenedAt = Date.now();
     elements.captureButton.disabled = true;
     elements.faceGuide.classList.remove("ready", "error");
-    setMessage(elements.formMessage, "Ubica el rostro dentro del recuadro y captura.", "");
-    scheduleAttendanceFaceFallback();
-    initFaceDetector().then((ready) => {
-      if (ready) {
-        startLiveFaceDetection();
-      } else {
-        elements.liveFaceStatus.textContent = "El lector facial no cargo. Toma una foto frontal para registrar con evidencia.";
-      }
-    });
+    if (isMobilePhotoOnlyMode()) {
+      state.liveFaceOk = true;
+      elements.captureButton.disabled = false;
+      elements.faceGuide.classList.add("ready");
+      elements.liveFaceStatus.textContent = "Modo movil: toma una foto frontal como evidencia. No se hara validacion facial automatica.";
+      setMessage(elements.formMessage, "Modo movil: solo se tomara la foto como evidencia.", "success");
+    } else {
+      setMessage(elements.formMessage, "Ubica el rostro dentro del recuadro y captura.", "");
+      scheduleAttendanceFaceFallback();
+      initFaceDetector().then((ready) => {
+        if (ready) {
+          startLiveFaceDetection();
+        } else {
+          elements.liveFaceStatus.textContent = "El lector facial no cargo. Toma una foto frontal para registrar con evidencia.";
+        }
+      });
+    }
   } catch (_error) {
     setMessage(elements.formMessage, "No se pudo abrir la camara.", "error");
   }
@@ -609,7 +654,7 @@ function canUseAttendanceFaceFallback() {
 }
 
 async function capturePhoto() {
-  if (!state.liveFaceOk && !canUseAttendanceFaceFallback()) {
+  if (!isMobilePhotoOnlyMode() && !state.liveFaceOk && !canUseAttendanceFaceFallback()) {
     setMessage(elements.formMessage, "Ubica un rostro claro dentro del recuadro antes de capturar.", "error");
     return;
   }
@@ -640,18 +685,21 @@ async function capturePhoto() {
 }
 
 async function prepareImageFile(file) {
-  setMessage(elements.formMessage, "Comprimiendo y validando rostro...");
+  setMessage(elements.formMessage, isMobilePhotoOnlyMode() ? "Preparando foto de evidencia..." : "Comprimiendo y validando rostro...");
   const compressed = await compressImage(file, 720, 0.72);
   const previewUrl = URL.createObjectURL(compressed);
+  const mobilePhotoOnly = isMobilePhotoOnlyMode();
   const faceCheck = state.liveFaceOk
     ? { ok: true, message: "Rostro validado. Ya puedes registrar la asistencia." }
     : await runOptionalFaceCheck(() => validateFaceInImage(previewUrl), FACE_IMAGE_CHECK_TIMEOUT_MS, "La validacion facial tardo demasiado.");
 
-  if (!faceCheck.ok) {
+  if (mobilePhotoOnly) {
+    state.faceWarning = "Registro movil: se guardo foto de evidencia sin validacion facial automatica.";
+  } else if (!faceCheck.ok) {
     state.faceWarning = faceCheck.message;
   }
 
-  if (state.cameraMode === "attendance" && state.colaborador?.rostro_enrolado && state.colaborador?.foto_referencia_path) {
+  if (!mobilePhotoOnly && state.cameraMode === "attendance" && state.colaborador?.rostro_enrolado && state.colaborador?.foto_referencia_path) {
     setMessage(elements.formMessage, "Comparando rostro con referencia enrolada...");
     const identityCheck = await runOptionalFaceCheck(
       () => verifyFaceIdentity(previewUrl, state.colaborador.foto_referencia_path),
@@ -673,10 +721,12 @@ async function prepareImageFile(file) {
   elements.previewBox.classList.remove("hidden");
   setMessage(
     elements.formMessage,
-    state.faceWarning
+    mobilePhotoOnly
+      ? "Foto lista. Ahora toca el boton Registrar asistencia para guardar la marca."
+      : state.faceWarning
       ? `Foto lista. Advertencia facial: ${state.faceWarning} La asistencia se puede registrar con evidencia fotografica.`
       : faceCheck.message,
-    state.faceWarning ? "error" : "success"
+    mobilePhotoOnly ? "success" : (state.faceWarning ? "error" : "success")
   );
   return true;
 }
@@ -985,7 +1035,7 @@ async function submitAttendance(event) {
   }
 
   if (!state.faceValidated || !state.compressedFile) {
-    setMessage(elements.formMessage, "Primero captura una foto con rostro validado.", "error");
+    setMessage(elements.formMessage, "Primero toma la foto de evidencia.", "error");
     setWorkflowState("photo");
     return;
   }
@@ -997,6 +1047,8 @@ async function submitAttendance(event) {
   }
 
   setBusy(elements.submitButton, true);
+  elements.submitButton.classList.remove("attention");
+  showProcess("Registrando asistencia", "Guardando foto, marca y envio a Buk/Ctrlit...");
 
   try {
     await syncServerClock();
@@ -1013,6 +1065,7 @@ async function submitAttendance(event) {
       });
 
     if (uploadError) throw uploadError;
+    showProcess("Registrando asistencia", "Foto guardada. Preparando datos de asistencia...");
 
     const location = await getLocation();
     const userObservation = elements.observacionInput.value.trim();
@@ -1040,6 +1093,7 @@ async function submitAttendance(event) {
       .single();
 
     if (insertError) throw insertError;
+    showProcess("Enviando a Buk/Ctrlit", "La marca ya quedo guardada. Estamos enviando la informacion...");
 
     const { data: bukData, error: bukError } = await supabaseClient.functions.invoke("enviar-asistencia-buk", {
       body: {
@@ -1071,8 +1125,10 @@ async function submitAttendance(event) {
     setMessage(elements.formMessage, error.message || "No se pudo registrar la asistencia.", "error");
     elements.submitButton.disabled = !state.faceValidated;
   } finally {
+    hideProcess();
     if (state.faceValidated) {
       elements.submitButton.disabled = false;
+      elements.submitButton.classList.add("attention");
     }
   }
 }
