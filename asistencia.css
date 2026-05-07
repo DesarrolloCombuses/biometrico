@@ -325,6 +325,10 @@ svg {
   background: var(--soft);
 }
 
+.step-item.active {
+  animation: stepGlow 1.35s ease-in-out infinite;
+}
+
 .step-item.active span,
 .step-item.done span {
   background: var(--primary);
@@ -333,6 +337,15 @@ svg {
 
 .step-item.done {
   color: var(--primary-strong);
+}
+
+@keyframes stepGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 rgba(11, 107, 58, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(11, 107, 58, 0.12);
+  }
 }
 
 .field-row,
@@ -450,6 +463,32 @@ svg {
   text-transform: capitalize;
 }
 
+.next-action-notice {
+  border: 1px solid #f1c34b;
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: #fff7dd;
+  color: #593f00;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.primary.attention {
+  animation: buttonPulse 1.05s ease-in-out infinite;
+  box-shadow: 0 0 0 0 rgba(11, 107, 58, 0.42);
+}
+
+@keyframes buttonPulse {
+  0%, 100% {
+    transform: translateY(0);
+    box-shadow: 0 0 0 0 rgba(11, 107, 58, 0.35);
+  }
+  50% {
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 7px rgba(11, 107, 58, 0.14);
+  }
+}
+
 .file-button {
   position: relative;
 }
@@ -469,6 +508,53 @@ svg {
   place-items: center;
   padding: 18px;
   background: rgba(18, 24, 21, 0.72);
+}
+
+.process-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(18, 24, 21, 0.58);
+}
+
+.process-modal {
+  width: min(340px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  border-radius: 8px;
+  padding: 22px;
+  background: #fff;
+  color: var(--ink);
+  text-align: center;
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.34);
+}
+
+.process-modal strong {
+  font-size: 1.12rem;
+}
+
+.process-modal p {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.loader-ring {
+  width: 42px;
+  height: 42px;
+  border: 4px solid #d7e5dd;
+  border-top-color: var(--primary);
+  border-radius: 999px;
+  animation: spin 0.82s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .camera-modal {
@@ -933,6 +1019,11 @@ video,
   line-height: 1.35;
 }
 
+.touch-device .next-action-notice {
+  padding: 14px 15px;
+  font-size: 1.02rem;
+}
+
 .touch-device .server-time-box,
 .touch-device .history-summary {
   grid-template-columns: 1fr;
@@ -1025,6 +1116,11 @@ video,
 .touch-device .face-guide {
   width: min(78vw, 360px);
   max-height: 58vh;
+}
+
+.touch-device .process-modal {
+  width: min(360px, calc(100vw - 28px));
+  padding: 24px 18px;
 }
 
 .mini-button {
@@ -1355,4 +1451,5 @@ video,
     font-size: 16px;
   }
 }
+
 
