@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Asistencia</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
-  <link rel="stylesheet" href="./asistencia.css?v=20260507-mobile-size-fix">
+  <link rel="stylesheet" href="./asistencia.css?v=20260507-mobile-photo-steps">
 </head>
 <body>
   <main class="shell">
@@ -144,6 +144,7 @@
             Registrar asistencia
           </button>
 
+          <div id="nextActionNotice" class="next-action-notice hidden" role="status"></div>
           <p id="formMessage" class="message" role="status"></p>
           <pre id="bukResultBox" class="response-box hidden"></pre>
         </form>
@@ -357,13 +358,22 @@
         </div>
       </div>
     </section>
+
+    <section id="processOverlay" class="process-overlay hidden" aria-live="polite" aria-busy="true">
+      <div class="process-modal">
+        <span class="loader-ring" aria-hidden="true"></span>
+        <strong id="processTitle">Procesando</strong>
+        <p id="processText">Espera un momento.</p>
+      </div>
+    </section>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
   <script src="./supabase-config.js"></script>
-  <script src="./asistencia.js?v=20260507-mobile-size-fix"></script>
+  <script src="./asistencia.js?v=20260507-mobile-photo-steps"></script>
 </body>
 </html>
+
 
