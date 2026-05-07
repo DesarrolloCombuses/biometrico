@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Asistencia</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
-  <link rel="stylesheet" href="./asistencia.css?v=20260507-mobile-photo-steps">
+  <link rel="stylesheet" href="./asistencia.css?v=20260507-ocultar-observaciones">
 </head>
 <body>
   <main class="shell">
@@ -60,6 +60,10 @@
           <i data-lucide="clipboard-check"></i>
           Registro
         </button>
+        <button id="historyTabButton" class="tab-button" type="button">
+          <i data-lucide="list-checks"></i>
+          Mis registros
+        </button>
         <button id="databaseTabButton" class="tab-button hidden" type="button">
           <i data-lucide="table-2"></i>
           Base colaboradores
@@ -70,7 +74,7 @@
         </button>
       </nav>
 
-      <div id="registerPanel" class="work-grid">
+      <div id="registerPanel" class="register-layout">
         <form id="attendanceForm" class="panel form-panel">
           <div class="step-list" aria-label="Proceso de registro">
             <div id="stepDni" class="step-item active">
@@ -148,7 +152,65 @@
           <p id="formMessage" class="message" role="status"></p>
           <pre id="bukResultBox" class="response-box hidden"></pre>
         </form>
+      </div>
 
+      <section id="historyPanel" class="panel history-panel hidden">
+        <div class="section-head">
+          <div>
+            <h2>Mis registros</h2>
+            <p id="historySubtitle">Digita una cedula para consultar</p>
+          </div>
+          <button id="refreshButton" class="icon-button" type="button" aria-label="Actualizar" title="Actualizar">
+            <i data-lucide="refresh-cw"></i>
+          </button>
+        </div>
+        <div class="field-row history-query">
+          <label>
+            Cedula
+            <input id="historyDniInput" type="text" inputmode="numeric" autocomplete="off" placeholder="Cedula del colaborador">
+          </label>
+          <label>
+            Desde
+            <input id="historyStartDateInput" type="date">
+          </label>
+          <label>
+            Hasta
+            <input id="historyEndDateInput" type="date">
+          </label>
+          <button id="historySearchButton" class="secondary" type="button">
+            <i data-lucide="search"></i>
+            Consultar
+          </button>
+        </div>
+        <div id="historySummary" class="history-summary hidden">
+          <div>
+            <span>Total marcas</span>
+            <strong id="historyTotal">0</strong>
+          </div>
+          <div>
+            <span>Ultima marca</span>
+            <strong id="historyLast">--</strong>
+          </div>
+          <div>
+            <span>Proxima</span>
+            <strong id="historyNext">Entrada</strong>
+          </div>
+        </div>
+        <div id="historyList" class="history-list"></div>
+        <div class="pagination-bar">
+          <button id="historyPrevPageButton" class="secondary" type="button" disabled>
+            <i data-lucide="chevron-left"></i>
+            Anterior
+          </button>
+          <span id="historyPageLabel">Pagina 1</span>
+          <button id="historyNextPageButton" class="secondary" type="button" disabled>
+            Siguiente
+            <i data-lucide="chevron-right"></i>
+          </button>
+        </div>
+      </section>
+
+      <template id="oldHistoryPanel">
         <aside class="panel history-panel">
           <div class="section-head">
             <div>
@@ -175,7 +237,7 @@
           </div>
           <div id="historyList" class="history-list"></div>
         </aside>
-      </div>
+      </template>
 
       <section id="databasePanel" class="panel database-panel hidden">
         <div class="database-toolbar">
@@ -308,11 +370,11 @@
               <thead>
                 <tr>
                   <th>Fecha</th>
-                  <th>Hora</th>
                   <th>Cédula</th>
                   <th>Nombre</th>
-                  <th>Sentido</th>
-                  <th>Origen</th>
+                  <th>Entrada</th>
+                  <th>Salida</th>
+                  <th>Tiempo</th>
                   <th>Buk</th>
                   <th>Observación</th>
                 </tr>
@@ -372,8 +434,9 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
   <script src="./supabase-config.js"></script>
-  <script src="./asistencia.js?v=20260507-mobile-photo-steps"></script>
+  <script src="./asistencia.js?v=20260507-ocultar-observaciones"></script>
 </body>
 </html>
+
 
 
