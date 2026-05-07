@@ -276,6 +276,10 @@ svg {
   gap: 18px;
 }
 
+.register-layout {
+  max-width: 860px;
+}
+
 .form-panel,
 .history-panel {
   padding: 22px;
@@ -698,6 +702,10 @@ video,
   gap: 10px;
 }
 
+.history-query {
+  margin-bottom: 14px;
+}
+
 .history-item {
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr);
@@ -736,6 +744,30 @@ video,
 .pill.salida {
   background: var(--accent);
   color: #1f260e;
+}
+
+.journey-mark {
+  display: grid;
+  gap: 5px;
+  justify-items: start;
+}
+
+.journey-mark small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.journey-missing {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  border-radius: 999px;
+  padding: 3px 9px;
+  background: #f7ead2;
+  color: #7a4b00;
+  font-size: 0.82rem;
+  font-weight: 850;
 }
 
 .history-meta {
@@ -1451,5 +1483,6 @@ video,
     font-size: 16px;
   }
 }
+
 
 
