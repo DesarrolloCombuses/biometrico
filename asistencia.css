@@ -771,6 +771,132 @@ video,
   }
 }
 
+.touch-device .shell {
+  width: 100%;
+  padding: 0;
+}
+
+.touch-device .app-view {
+  padding: 10px;
+}
+
+.touch-device .topbar {
+  align-items: flex-start;
+}
+
+.touch-device .top-actions {
+  align-items: flex-end;
+  flex-direction: column-reverse;
+}
+
+.touch-device .tabs {
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.touch-device .tab-button {
+  flex: 0 0 auto;
+  min-width: max-content;
+}
+
+.touch-device .work-grid {
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.touch-device .auth-panel,
+.touch-device .form-panel,
+.touch-device .history-panel,
+.touch-device .database-panel {
+  padding: 14px;
+}
+
+.touch-device .field-row,
+.touch-device .photo-tools {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.touch-device .step-list {
+  grid-template-columns: 1fr;
+}
+
+.touch-device .secondary,
+.touch-device .file-button {
+  width: 100%;
+}
+
+.touch-device .primary,
+.touch-device .secondary,
+.touch-device .file-button,
+.touch-device .icon-button {
+  min-height: 48px;
+}
+
+.touch-device .server-time-box,
+.touch-device .history-summary {
+  grid-template-columns: 1fr;
+}
+
+.touch-device .camera-overlay {
+  place-items: stretch;
+  padding: 0;
+  background: #101511;
+}
+
+.touch-device .camera-modal {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  border: 0;
+  border-radius: 0;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  background: #ffffff;
+}
+
+.touch-device .camera-header {
+  align-items: flex-start;
+  min-height: 58px;
+}
+
+.touch-device .camera-header h2 {
+  font-size: 1.12rem;
+}
+
+.touch-device .camera-header p {
+  font-size: 0.9rem;
+  line-height: 1.25;
+}
+
+.touch-device .camera-frame {
+  min-height: 0;
+  border-radius: 8px;
+}
+
+.touch-device .camera-frame video {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  object-fit: cover;
+}
+
+.touch-device .camera-modal .photo-tools {
+  flex-direction: row;
+}
+
+.touch-device .camera-modal .primary {
+  min-height: 56px;
+  font-size: 1rem;
+}
+
+.touch-device .face-guide {
+  width: min(78vw, 360px);
+  max-height: 58vh;
+}
+
 .mini-button {
   min-height: 34px;
   border: 1px solid #cfe0da;
@@ -1081,3 +1207,4 @@ video,
     font-size: 16px;
   }
 }
+
